@@ -1,1 +1,43 @@
+services:
+  frontend:
+    build: ./frontend
+    container_name: cruzazul_frontend
+    restart: always
+    ports:
+      - "80:3000"
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      DB_HOST: database
+      DB_USER: cruzazul_user
+      DB_PASSWORD: cruzazul_pass
+      DB_NAME: cruzazul_db
+      DB_PORT: 5432
+    networks:
+      - azul-net
 
+  database:
+    build: ./database
+    container_name: cruzazul_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: cruzazul_user
+      POSTGRES_PASSWORD: cruzazul_pass
+      POSTGRES_DB: cruzazul_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - azul-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cruzazul_user -d cruzazul_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  azul-net:
+    driver: bridge
