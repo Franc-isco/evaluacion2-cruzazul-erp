@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS productos (
 );
 
 INSERT INTO productos (nombre, categoria, precio, stock)
-VALUES
+VALUES 
 ('Paracetamol 500mg', 'Medicamentos', 1990, 50),
 ('Ibuprofeno 400mg', 'Medicamentos', 2490, 40),
 ('Alcohol Gel 250ml', 'Higiene', 1590, 30);
