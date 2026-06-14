@@ -1,1 +1,36 @@
+version: '3.9'
 
+services:
+  frontend:
+    build: ./frontend
+    container_name: evaluacion3_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: host_rds
+      DB_USER: user_rds
+      DB_PASSWORD: pass_rds
+      DB_NAME: db_rds
+      DB_PORT: 5432
+    depends_on:
+      - backend # opcional
+    networks:
+      - eval3-net
+
+  backend:
+    build: ./backend
+    container_name: evaluacion3_backend
+    ports:
+      - "4000:4000"
+    environment:
+      DB_HOST: host_rds
+      DB_USER: user_rds
+      DB_PASSWORD: pass_rds
+      DB_NAME: db_rds
+      DB_PORT: 5432
+    networks:
+      - eval3-net
+
+networks:
+  eval3-net:
+    driver: bridge
