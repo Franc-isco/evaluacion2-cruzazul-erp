@@ -5,7 +5,7 @@ services:
     build: ./frontend
     container_name: evaluacion3_frontend
     ports:
-      - "3000:3000"
+      - "80:3000"
     environment:
       DB_HOST: rds-cruzazul-eval3.xxxxx.us-east-1.rds.amazonaws.com
       DB_USER: user_cruzazul
