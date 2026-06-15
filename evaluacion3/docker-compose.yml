@@ -7,13 +7,13 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DB_HOST: host_rds
-      DB_USER: user_rds
-      DB_PASSWORD: pass_rds
-      DB_NAME: db_rds
+      DB_HOST: rds-cruzazul-eval3.xxxxx.us-east-1.rds.amazonaws.com
+      DB_USER: user_cruzazul
+      DB_PASSWORD: PassCruzAzul123!
+      DB_NAME: cruzazul_db
       DB_PORT: 5432
     depends_on:
-      - backend # opcional
+      - backend
     networks:
       - eval3-net
 
@@ -23,10 +23,10 @@ services:
     ports:
       - "4000:4000"
     environment:
-      DB_HOST: host_rds
-      DB_USER: user_rds
-      DB_PASSWORD: pass_rds
-      DB_NAME: db_rds
+      DB_HOST: rds-cruzazul-eval3.cs6ze95fbgcm.us-east-1.rds.amazonaws.com
+      DB_USER: user_cruzazul
+      DB_PASSWORD: PassCruzAzul123!
+      DB_NAME: cruzazul_db
       DB_PORT: 5432
     networks:
       - eval3-net
