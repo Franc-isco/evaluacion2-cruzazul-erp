@@ -1,0 +1,16 @@
+{
+  "name": "cruz-azul-frontend",
+  "version": "1.0.0",
+  "description": "Frontend Node.js Express para Farmacia Cruz Azul",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.5"
+  }
+}
