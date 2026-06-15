@@ -66,9 +66,6 @@ app.get("/", (req, res) => {
             <label>Contraseña</label>
             <input type="password" name="password" placeholder="Ingrese contraseña" required>
 
-            <label>Código MFA</label>
-            <input type="text" name="mfa" placeholder="Ingrese código de autenticación" required>
-
             <button type="submit">Ingresar</button>
           </form>
 
@@ -81,27 +78,114 @@ app.get("/", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  const { usuario, password, mfa } = req.body;
+  const { usuario, password } = req.body;
 
-  if (usuario === APP_USER && password === APP_PASSWORD && mfa === MFA_CODE) {
-    const token = jwt.sign(
-      { usuario },
+  if (usuario === APP_USER && password === APP_PASSWORD) {
+    const preAuthToken = jwt.sign(
+      { usuario, etapa: "mfa-pendiente" },
       JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "5m" }
     );
 
-    res.cookie("token", token, {
+    res.cookie("pre_auth", preAuthToken, {
       httpOnly: true,
       sameSite: "strict"
     });
 
-    return res.redirect("/dashboard");
+    return res.redirect("/mfa");
   }
 
   return res.send(`
     <h2>Credenciales incorrectas</h2>
     <a href="/">Volver al login</a>
   `);
+});
+
+app.get("/mfa", (req, res) => {
+  const preAuth = req.cookies.pre_auth;
+
+  if (!preAuth) {
+    return res.redirect("/");
+  }
+
+  try {
+    const datos = jwt.verify(preAuth, JWT_SECRET);
+
+    if (datos.etapa !== "mfa-pendiente") {
+      return res.redirect("/");
+    }
+
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <title>Cruz Azul ERP - MFA</title>
+        <link rel="stylesheet" href="/style.css">
+      </head>
+      <body>
+        <div class="login-container">
+          <div class="card">
+            <h1>Verificación MFA</h1>
+            <p>Ingrese el código de autenticación para completar el acceso.</p>
+
+            <form method="POST" action="/mfa">
+              <label>Código MFA</label>
+              <input type="text" name="mfa" placeholder="Ingrese código MFA" required>
+
+              <button type="submit">Verificar código</button>
+            </form>
+
+            <p class="info">Segundo factor de autenticación requerido.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    return res.redirect("/");
+  }
+});
+
+app.post("/mfa", (req, res) => {
+  const { mfa } = req.body;
+  const preAuth = req.cookies.pre_auth;
+
+  if (!preAuth) {
+    return res.redirect("/");
+  }
+
+  try {
+    const datos = jwt.verify(preAuth, JWT_SECRET);
+
+    if (datos.etapa !== "mfa-pendiente") {
+      return res.redirect("/");
+    }
+
+    if (mfa === MFA_CODE) {
+      const token = jwt.sign(
+        { usuario: datos.usuario },
+        JWT_SECRET,
+        { expiresIn: "15m" }
+      );
+
+      res.clearCookie("pre_auth");
+
+      res.cookie("token", token, {
+        httpOnly: true,
+        sameSite: "strict"
+      });
+
+      return res.redirect("/dashboard");
+    }
+
+    return res.send(`
+      <h2>Código MFA incorrecto</h2>
+      <a href="/mfa">Intentar nuevamente</a>
+    `);
+  } catch (error) {
+    return res.redirect("/");
+  }
 });
 
 app.get("/dashboard", validarToken, async (req, res) => {
