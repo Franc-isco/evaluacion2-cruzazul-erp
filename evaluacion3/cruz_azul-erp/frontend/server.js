@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "clave_temporal";
 const APP_USER = process.env.APP_USER || "admin";
 const APP_PASSWORD = process.env.APP_PASSWORD || "admin123";
+const MFA_CODE = process.env.MFA_CODE || "9X7K-42QZ";
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -65,6 +66,9 @@ app.get("/", (req, res) => {
             <label>Contraseña</label>
             <input type="password" name="password" placeholder="Ingrese contraseña" required>
 
+            <label>Código MFA</label>
+            <input type="text" name="mfa" placeholder="Ingrese código de autenticación" required>
+
             <button type="submit">Ingresar</button>
           </form>
 
@@ -77,9 +81,9 @@ app.get("/", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  const { usuario, password } = req.body;
+  const { usuario, password, mfa } = req.body;
 
-  if (usuario === APP_USER && password === APP_PASSWORD) {
+  if (usuario === APP_USER && password === APP_PASSWORD && mfa === MFA_CODE) {
     const token = jwt.sign(
       { usuario },
       JWT_SECRET,
