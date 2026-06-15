@@ -1,11 +1,149 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Frontend Evaluación 3</title>
+<meta charset="UTF-8">
+<title>ERP Farmacia Cruz Azul</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f2f6fa;
+        margin: 0;
+        padding: 0;
+        color: #1a1a1a;
+    }
+    header {
+        background-color: #005baa; /* Azul Cruz Azul */
+        color: white;
+        padding: 20px;
+        text-align: center;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    main {
+        max-width: 900px;
+        margin: 30px auto;
+        padding: 20px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    form input {
+        padding: 10px;
+        font-size: 16px;
+        flex: 1 1 150px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+    form button {
+        padding: 10px 20px;
+        background-color: #ff0000; /* Rojo Cruz Azul */
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        flex: 1 1 100px;
+    }
+    form button:hover {
+        background-color: #cc0000;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 12px;
+        text-align: center;
+    }
+    th {
+        background-color: #005baa;
+        color: white;
+    }
+    tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+    #refresh-btn {
+        margin-top: 15px;
+        padding: 10px 15px;
+        background-color: #005baa;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    #refresh-btn:hover {
+        background-color: #004080;
+    }
+</style>
+<script>
+async function listarProductos() {
+  const res = await fetch('http://localhost:4000/api/productos');
+  const data = await res.json();
+  const tabla = document.getElementById('tabla-productos');
+  tabla.innerHTML = '';
+  data.forEach(p => {
+    const row = `<tr>
+      <td>${p.id}</td>
+      <td>${p.nombre}</td>
+      <td>${p.categoria}</td>
+      <td>${p.precio}</td>
+      <td>${p.stock}</td>
+    </tr>`;
+    tabla.innerHTML += row;
+  });
+}
+
+async function agregarProducto(event) {
+  event.preventDefault();
+  const nombre = document.getElementById('nombre').value;
+  const categoria = document.getElementById('categoria').value;
+  const precio = document.getElementById('precio').value;
+  const stock = document.getElementById('stock').value;
+
+  await fetch('http://localhost:4000/api/productos', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({nombre, categoria, precio, stock})
+  });
+
+  listarProductos();
+  document.getElementById('producto-form').reset();
+}
+</script>
 </head>
 <body>
-  <h1>ERP Farmacia Cruz Azul – Evaluación 3</h1>
-  <p>El frontend mínimo está funcionando.</p>
+<header>ERP Farmacia Cruz Azul</header>
+<main>
+  <form id="producto-form" onsubmit="agregarProducto(event)">
+    <input type="text" id="nombre" placeholder="Nombre del producto" required>
+    <input type="text" id="categoria" placeholder="Categoría">
+    <input type="number" id="precio" placeholder="Precio" required>
+    <input type="number" id="stock" placeholder="Stock" required>
+    <button type="submit">Agregar</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Categoría</th>
+        <th>Precio</th>
+        <th>Stock</th>
+      </tr>
+    </thead>
+    <tbody id="tabla-productos"></tbody>
+  </table>
+
+  <button id="refresh-btn" onclick="listarProductos()">Actualizar Tabla</button>
+</main>
 </body>
 </html>
