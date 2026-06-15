@@ -2,6 +2,7 @@ const express = require('express');
 const { Pool } = require('pg');
 const app = express();
 const port = 4000;
+const fs = require('fs');
 
 // Middleware para JSON
 app.use(express.json());
@@ -13,6 +14,10 @@ const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  ssl: {
+    rejectUnauthorized: true,
+    ca: fs.readFileSync('./global-bundle.pem').toString()
+  }
 });
 
 // Endpoint: Listar productos
