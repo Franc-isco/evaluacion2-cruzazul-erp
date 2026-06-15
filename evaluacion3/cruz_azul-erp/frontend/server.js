@@ -44,7 +44,29 @@ function validarToken(req, res, next) {
   }
 }
 
+function renderError(titulo, mensaje, volver = "/") {
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <title>${titulo}</title>
+      <link rel="stylesheet" href="/style.css">
+    </head>
+    <body>
+      <div class="error-box">
+        <h2>${titulo}</h2>
+        <p>${mensaje}</p>
+        <a href="${volver}" class="small-link">Volver</a>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 app.get("/", (req, res) => {
+  res.clearCookie("pre_auth");
+
   res.send(`
     <!DOCTYPE html>
     <html lang="es">
@@ -56,20 +78,30 @@ app.get("/", (req, res) => {
     <body>
       <div class="login-container">
         <div class="card">
-          <h1>Farmacia Cruz Azul</h1>
-          <p>Portal de autenticación seguro</p>
+          <div class="brand">
+            <div class="logo-circle">💊</div>
+            <div class="brand-text">
+              <h1>Cruz Azul ERP</h1>
+              <p>Portal seguro de farmacia</p>
+            </div>
+          </div>
+
+          <span class="badge">🛡️ Acceso protegido con MFA + JWT</span>
 
           <form method="POST" action="/login">
             <label>Usuario</label>
-            <input type="text" name="usuario" placeholder="Ingrese usuario" required>
+            <input type="text" name="usuario" placeholder="Ingrese usuario administrador" required>
 
             <label>Contraseña</label>
-            <input type="password" name="password" placeholder="Ingrese contraseña" required>
+            <input type="password" name="password" placeholder="Ingrese contraseña segura" required>
 
-            <button type="submit">Ingresar</button>
+            <button type="submit">Continuar al segundo factor</button>
           </form>
 
-          <p class="info">Acceso protegido mediante token JWT</p>
+          <p class="info">
+            Primera etapa de autenticación: validación de credenciales principales.
+            Luego se solicita un segundo factor MFA.
+          </p>
         </div>
       </div>
     </body>
@@ -95,10 +127,13 @@ app.post("/login", (req, res) => {
     return res.redirect("/mfa");
   }
 
-  return res.send(`
-    <h2>Credenciales incorrectas</h2>
-    <a href="/">Volver al login</a>
-  `);
+  return res.send(
+    renderError(
+      "Credenciales incorrectas",
+      "El usuario o la contraseña ingresada no son válidos.",
+      "/"
+    )
+  );
 });
 
 app.get("/mfa", (req, res) => {
@@ -126,17 +161,30 @@ app.get("/mfa", (req, res) => {
       <body>
         <div class="login-container">
           <div class="card">
-            <h1>Verificación MFA</h1>
-            <p>Ingrese el código de autenticación para completar el acceso.</p>
+            <div class="brand">
+              <div class="logo-circle">🔐</div>
+              <div class="brand-text">
+                <h1>Verificación MFA</h1>
+                <p>Segundo factor de seguridad</p>
+              </div>
+            </div>
+
+            <span class="badge">✅ Paso 2 de autenticación</span>
+
+            <p class="info">
+              Ingrese el código MFA para completar el acceso al sistema Cruz Azul ERP.
+            </p>
 
             <form method="POST" action="/mfa">
               <label>Código MFA</label>
-              <input type="text" name="mfa" placeholder="Ingrese código MFA" required>
+              <input type="text" name="mfa" placeholder="Ingrese código de autenticación" required>
 
-              <button type="submit">Verificar código</button>
+              <button type="submit">Verificar y entrar</button>
             </form>
 
-            <p class="info">Segundo factor de autenticación requerido.</p>
+            <p class="info">
+              Solo se genera el token JWT final si el segundo factor es válido.
+            </p>
           </div>
         </div>
       </body>
@@ -179,10 +227,13 @@ app.post("/mfa", (req, res) => {
       return res.redirect("/dashboard");
     }
 
-    return res.send(`
-      <h2>Código MFA incorrecto</h2>
-      <a href="/mfa">Intentar nuevamente</a>
-    `);
+    return res.send(
+      renderError(
+        "Código MFA incorrecto",
+        "El código de autenticación ingresado no coincide con el segundo factor configurado.",
+        "/mfa"
+      )
+    );
   } catch (error) {
     return res.redirect("/");
   }
@@ -202,32 +253,60 @@ app.get("/dashboard", validarToken, async (req, res) => {
       </head>
       <body>
         <div class="container">
-          <header>
-            <h1>Dashboard Cruz Azul ERP</h1>
+          <div class="topbar">
+            <div>
+              <h1>💊 Dashboard Cruz Azul ERP</h1>
+              <p>Panel de control seguro conectado a AWS RDS PostgreSQL</p>
+            </div>
             <a href="/logout" class="logout">Cerrar sesión</a>
-          </header>
+          </div>
 
-          <section class="status">
-            <h2>Estado de la infraestructura</h2>
-            <p><strong>Frontend:</strong> EC2 con Node.js + Express</p>
-            <p><strong>Base de datos:</strong> AWS RDS PostgreSQL</p>
-            <p><strong>Conexión BD:</strong> Correcta</p>
-            <p><strong>Hora desde RDS:</strong> ${resultado.rows[0].fecha_servidor}</p>
+          <div class="grid">
+            <div class="stat-card">
+              <div class="stat-icon">🖥️</div>
+              <h3>Frontend EC2</h3>
+              <p>Aplicación Node.js + Express desplegada con Docker en una instancia Debian.</p>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">🗄️</div>
+              <h3>RDS PostgreSQL</h3>
+              <p>Base de datos PaaS privada, accesible solo desde el Security Group del frontend.</p>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">🔐</div>
+              <h3>MFA + JWT</h3>
+              <p>Acceso en dos etapas y rutas protegidas mediante token JWT temporal.</p>
+            </div>
+          </div>
+
+          <section class="section-card">
+            <h2>🛡️ Estado de la infraestructura</h2>
+            <div class="status">
+              <p><strong>Frontend:</strong> EC2 con Node.js + Express + Docker</p>
+              <p><strong>Base de datos:</strong> AWS RDS PostgreSQL</p>
+              <p><strong>Conexión BD:</strong> Correcta</p>
+              <p><strong>Hora desde RDS:</strong> ${resultado.rows[0].fecha_servidor}</p>
+            </div>
           </section>
 
-          <section>
-            <h2>Gestión de productos</h2>
-            <form method="POST" action="/productos">
+          <section class="section-card">
+            <h2>📦 Gestión de productos</h2>
+            <form method="POST" action="/productos" class="form-grid">
               <input type="text" name="nombre" placeholder="Nombre del producto" required>
               <input type="text" name="categoria" placeholder="Categoría" required>
               <input type="number" name="precio" placeholder="Precio" required>
               <input type="number" name="stock" placeholder="Stock" required>
-              <button type="submit">Agregar producto</button>
+              <button type="submit">Agregar producto al inventario</button>
             </form>
           </section>
 
-          <section>
-            <h2>Productos registrados</h2>
+          <section class="section-card">
+            <h2>🧾 Productos registrados</h2>
+            <p class="info">
+              Consulta los productos almacenados en la base de datos PostgreSQL de AWS RDS.
+            </p>
             <a href="/productos" class="button-link">Ver productos</a>
           </section>
         </div>
@@ -235,11 +314,13 @@ app.get("/dashboard", validarToken, async (req, res) => {
       </html>
     `);
   } catch (error) {
-    res.send(`
-      <h2>Error de conexión con RDS</h2>
-      <p>${error.message}</p>
-      <a href="/">Volver</a>
-    `);
+    res.send(
+      renderError(
+        "Error de conexión con RDS",
+        error.message,
+        "/"
+      )
+    );
   }
 });
 
@@ -254,11 +335,13 @@ app.post("/productos", validarToken, async (req, res) => {
 
     res.redirect("/productos");
   } catch (error) {
-    res.send(`
-      <h2>Error al insertar producto</h2>
-      <p>${error.message}</p>
-      <a href="/dashboard">Volver al dashboard</a>
-    `);
+    res.send(
+      renderError(
+        "Error al insertar producto",
+        error.message,
+        "/dashboard"
+      )
+    );
   }
 });
 
@@ -271,8 +354,8 @@ app.get("/productos", validarToken, async (req, res) => {
         <td>${producto.id}</td>
         <td>${producto.nombre}</td>
         <td>${producto.categoria}</td>
-        <td>$${producto.precio}</td>
-        <td>${producto.stock}</td>
+        <td class="price">$${producto.precio}</td>
+        <td class="stock">${producto.stock}</td>
       </tr>
     `).join("");
 
@@ -286,40 +369,51 @@ app.get("/productos", validarToken, async (req, res) => {
       </head>
       <body>
         <div class="container">
-          <header>
-            <h1>Productos registrados</h1>
-            <a href="/dashboard" class="logout">Volver</a>
-          </header>
+          <div class="topbar">
+            <div>
+              <h1>📦 Inventario Cruz Azul</h1>
+              <p>Productos almacenados en AWS RDS PostgreSQL</p>
+            </div>
+            <a href="/dashboard" class="logout">Volver al dashboard</a>
+          </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Producto</th>
-                <th>Categoría</th>
-                <th>Precio</th>
-                <th>Stock</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filas}
-            </tbody>
-          </table>
+          <div class="section-card">
+            <h2>🧾 Listado de productos</h2>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                    <th>Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${filas}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </body>
       </html>
     `);
   } catch (error) {
-    res.send(`
-      <h2>Error al consultar productos</h2>
-      <p>${error.message}</p>
-      <a href="/dashboard">Volver al dashboard</a>
-    `);
+    res.send(
+      renderError(
+        "Error al consultar productos",
+        error.message,
+        "/dashboard"
+      )
+    );
   }
 });
 
 app.get("/logout", (req, res) => {
   res.clearCookie("token");
+  res.clearCookie("pre_auth");
   res.redirect("/");
 });
 
