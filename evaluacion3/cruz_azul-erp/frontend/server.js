@@ -2,6 +2,8 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
+const speakeasy = require("speakeasy");
+const QRCode = require("qrcode");
 require("dotenv").config();
 
 const app = express();
@@ -10,7 +12,9 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "clave_temporal";
 const APP_USER = process.env.APP_USER || "admin";
 const APP_PASSWORD = process.env.APP_PASSWORD || "admin123";
-const MFA_CODE = process.env.MFA_CODE || "9X7K-42QZ";
+const TOTP_SECRET = process.env.TOTP_SECRET;
+const TOTP_ISSUER = "Cruz Azul ERP";
+const TOTP_LABEL = "admin@cruz-azul-erp";
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -136,7 +140,7 @@ app.post("/login", (req, res) => {
   );
 });
 
-app.get("/mfa", (req, res) => {
+app.get("/mfa", async (req, res) => {
   const preAuth = req.cookies.pre_auth;
 
   if (!preAuth) {
@@ -149,6 +153,25 @@ app.get("/mfa", (req, res) => {
     if (datos.etapa !== "mfa-pendiente") {
       return res.redirect("/");
     }
+
+    if (!TOTP_SECRET) {
+      return res.send(
+        renderError(
+          "MFA no configurado",
+          "No existe una clave TOTP configurada en el servidor.",
+          "/"
+        )
+      );
+    }
+
+    const otpauthUrl = speakeasy.otpauthURL({
+      secret: TOTP_SECRET,
+      label: TOTP_LABEL,
+      issuer: TOTP_ISSUER,
+      encoding: "base32"
+    });
+
+    const qrDataUrl = await QRCode.toDataURL(otpauthUrl);
 
     res.send(`
       <!DOCTYPE html>
@@ -165,25 +188,30 @@ app.get("/mfa", (req, res) => {
               <div class="logo-circle">🔐</div>
               <div class="brand-text">
                 <h1>Verificación MFA</h1>
-                <p>Segundo factor de seguridad</p>
+                <p>Google Authenticator</p>
               </div>
             </div>
 
             <span class="badge">✅ Paso 2 de autenticación</span>
 
             <p class="info">
-              Ingrese el código MFA para completar el acceso al sistema Cruz Azul ERP.
+              Escanee este código QR en Google Authenticator o Microsoft Authenticator.
+              Luego ingrese el código temporal de 6 dígitos.
             </p>
+
+            <div style="text-align:center; margin: 15px 0;">
+              <img src="${qrDataUrl}" alt="QR MFA Google Authenticator" style="max-width:180px;">
+            </div>
 
             <form method="POST" action="/mfa">
               <label>Código MFA</label>
-              <input type="text" name="mfa" placeholder="Ingrese código de autenticación" required>
+              <input type="text" name="mfa" placeholder="Ingrese código de 6 dígitos" required>
 
               <button type="submit">Verificar y entrar</button>
             </form>
 
             <p class="info">
-              Solo se genera el token JWT final si el segundo factor es válido.
+              Solo se genera el token JWT final si el código temporal MFA es válido.
             </p>
           </div>
         </div>
@@ -210,7 +238,24 @@ app.post("/mfa", (req, res) => {
       return res.redirect("/");
     }
 
-    if (mfa === MFA_CODE) {
+    if (!TOTP_SECRET) {
+      return res.send(
+        renderError(
+          "MFA no configurado",
+          "No existe una clave TOTP configurada en el servidor.",
+          "/"
+        )
+      );
+    }
+
+    const mfaValido = speakeasy.totp.verify({
+      secret: TOTP_SECRET,
+      encoding: "base32",
+      token: String(mfa).replace(/\s/g, ""),
+      window: 1
+    });
+
+    if (mfaValido) {
       const token = jwt.sign(
         { usuario: datos.usuario },
         JWT_SECRET,
@@ -230,7 +275,7 @@ app.post("/mfa", (req, res) => {
     return res.send(
       renderError(
         "Código MFA incorrecto",
-        "El código de autenticación ingresado no coincide con el segundo factor configurado.",
+        "El código temporal ingresado no coincide con Google Authenticator.",
         "/mfa"
       )
     );
