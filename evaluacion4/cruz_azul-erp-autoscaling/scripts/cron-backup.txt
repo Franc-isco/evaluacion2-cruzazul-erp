@@ -1,0 +1,1 @@
+0 2 * * * /bin/bash /srv/cruz_azul-erp/scripts/backup_bd_s3.sh >> /var/log/cruz_azul_backup_eva4.log 2>&1
