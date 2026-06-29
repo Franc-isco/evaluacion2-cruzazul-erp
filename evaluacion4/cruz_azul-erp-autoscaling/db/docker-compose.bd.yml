@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: cruz_azul_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: cruzazuldb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: CambiarPasswordBD2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  postgres_data:
